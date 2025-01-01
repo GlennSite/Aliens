@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Duel Galactique</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: black;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+
+    canvas {
+      border: 2px solid white;
+      background: #111;
+    }
+
+    #score {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: white;
+      font-size: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div id="score">Player 1: 0 | Player 2: 0</div>
+  <canvas id="gameCanvas" width="600" height="800"></canvas>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Game settings
+    const playerWidth = 50;
+    const playerHeight = 20;
+    const bulletWidth = 5;
+    const bulletHeight = 10;
+    const alienSize = 30;
+    const playerSpeed = 5;
+    const bulletSpeed = 7;
+    const alienSpeed = 2;
+
+    // Game state
+    const player1 = { x: canvas.width / 2 - playerWidth / 2, y: canvas.height - 40, score: 0 };
+    const player2 = { x: canvas.width / 2 - playerWidth / 2, y: 20, score: 0 };
+    const bullets1 = [];
+    const bullets2 = [];
+    const aliens = [];
+    let keys = {};
+
+    // Helper functions
+    function drawRect(x, y, width, height, color) {
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, width, height);
+    }
+
+    function spawnAlien() {
+      const x = Math.random() * (canvas.width - alienSize);
+      const y = canvas.height / 2 - alienSize / 2;
+      const direction = Math.random() < 0.5 ? -1 : 1; // Random direction (up or down)
+      aliens.push({ x, y, direction });
+    }
+
+    function updateScore() {
+      document.getElementById('score').textContent = `Player 1: ${player1.score} | Player 2: ${player2.score}`;
+    }
+
+    // Game loop
+    function gameLoop() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw players
+      drawRect(player1.x, player1.y, playerWidth, playerHeight, 'blue');
+      drawRect(player2.x, player2.y, playerWidth, playerHeight, 'red');
+
+      // Move players
+      if (keys['ArrowLeft'] && player1.x > 0) player1.x -= playerSpeed;
+      if (keys['ArrowRight'] && player1.x < canvas.width - playerWidth) player1.x += playerSpeed;
+      if (keys['a'] && player2.x > 0) player2.x -= playerSpeed;
+      if (keys['d'] && player2.x < canvas.width - playerWidth) player2.x += playerSpeed;
+
+      // Move bullets
+      bullets1.forEach((bullet, index) => {
+        bullet.y -= bulletSpeed;
+        if (bullet.y < 0) bullets1.splice(index, 1);
+      });
+
+      bullets2.forEach((bullet, index) => {
+        bullet.y += bulletSpeed;
+        if (bullet.y > canvas.height) bullets2.splice(index, 1);
+      });
+
+      // Draw bullets
+      bullets1.forEach(bullet => drawRect(bullet.x, bullet.y, bulletWidth, bulletHeight, 'blue'));
+      bullets2.forEach(bullet => drawRect(bullet.x, bullet.y, bulletWidth, bulletHeight, 'red'));
+
+      // Move aliens
+      aliens.forEach((alien, index) => {
+        alien.y += alien.direction * alienSpeed;
+        if (alien.y < 0 || alien.y > canvas.height - alienSize) alien.direction *= -1;
+
+        // Check collision with bullets (Player 1)
+        bullets1.forEach((bullet, bulletIndex) => {
+          if (
+            bullet.x < alien.x + alienSize &&
+            bullet.x + bulletWidth > alien.x &&
+            bullet.y < alien.y + alienSize &&
+            bullet.y + bulletHeight > alien.y
+          ) {
+            bullets1.splice(bulletIndex, 1);
+            aliens.splice(index, 1);
+            player1.score++;
+            updateScore();
+          }
+        });
+
+        // Check collision with bullets (Player 2)
+        bullets2.forEach((bullet, bulletIndex) => {
+          if (
+            bullet.x < alien.x + alienSize &&
+            bullet.x + bulletWidth > alien.x &&
+            bullet.y < alien.y + alienSize &&
+            bullet.y + bulletHeight > alien.y
+          ) {
+            bullets2.splice(bulletIndex, 1);
+            aliens.splice(index, 1);
+            player2.score++;
+            updateScore();
+          }
+        });
+      });
+
+      // Draw aliens
+      aliens.forEach(alien => drawRect(alien.x, alien.y, alienSize, alienSize, 'green'));
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    // Event listeners
+    window.addEventListener('keydown', e => {
+      keys[e.key] = true;
+      if (e.key === ' ') bullets1.push({ x: player1.x + playerWidth / 2 - bulletWidth / 2, y: player1.y });
+      if (e.key === 'w') bullets2.push({ x: player2.x + playerWidth / 2 - bulletWidth / 2, y: player2.y + playerHeight });
+    });
+
+    window.addEventListener('keyup', e => {
+      keys[e.key] = false;
+    });
+
+    // Spawn aliens periodically
+    setInterval(spawnAlien, 1000);
+
+    // Start game
+    updateScore();
+    gameLoop();
+  </script>
+</body>
+</html>
